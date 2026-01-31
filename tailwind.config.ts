@@ -75,6 +75,13 @@ export default {
           foreground: "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
           border: "var(--sidebar-accent-border)"
         },
+        "dino-green": "hsl(var(--dino-green) / <alpha-value>)",
+        "dino-light": "hsl(var(--dino-light) / <alpha-value>)",
+        "coin-gold": "hsl(var(--coin-gold) / <alpha-value>)",
+        "ocean-blue": "hsl(var(--ocean-blue) / <alpha-value>)",
+        "sky-light": "hsl(var(--sky-light) / <alpha-value>)",
+        "alert-red": "hsl(var(--alert-red) / <alpha-value>)",
+        "paper-white": "hsl(var(--paper-white) / <alpha-value>)",
         status: {
           online: "rgb(34 197 94)",
           away: "rgb(245 158 11)",
@@ -86,6 +93,8 @@ export default {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
       },
       keyframes: {
         "accordion-down": {

@@ -1,8 +1,8 @@
 import { db } from "./db";
 import { 
-  appUsers, chores, goals, transactions, moduleProgress,
-  type InsertAppUser, type InsertChore, type InsertGoal, type InsertTransaction, type InsertModuleProgress,
-  type AppUser, type Chore, type Goal, type Transaction, type ModuleProgress
+  appUsers, chores, goals, transactions, moduleProgress, dailyMoods,
+  type InsertAppUser, type InsertChore, type InsertGoal, type InsertTransaction, type InsertModuleProgress, type InsertDailyMood,
+  type AppUser, type Chore, type Goal, type Transaction, type ModuleProgress, type DailyMood
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -15,6 +15,10 @@ export interface IStorage {
   getChildren(parentId: number): Promise<AppUser[]>;
   updateBalance(userId: number, amountChange: number): Promise<AppUser>;
 
+  // Moods
+  getMoods(userId: number): Promise<DailyMood[]>;
+  createMood(mood: InsertDailyMood): Promise<DailyMood>;
+
   // Chores
   getChores(assigneeId?: number, creatorId?: number): Promise<Chore[]>;
   getChore(id: number): Promise<Chore | undefined>;
@@ -25,7 +29,7 @@ export interface IStorage {
   getGoals(userId: number): Promise<Goal[]>;
   getGoal(id: number): Promise<Goal | undefined>;
   createGoal(goal: InsertGoal): Promise<Goal>;
-  updateGoalAmount(id: number, amount: number): Promise<Goal>; // Returns updated goal
+  updateGoalAmount(id: number, amount: number): Promise<Goal>;
   completeGoal(id: number): Promise<Goal>;
 
   // Transactions
@@ -34,11 +38,10 @@ export interface IStorage {
 
   // Modules
   getModuleProgress(userId: number): Promise<ModuleProgress[]>;
-  completeModule(userId: number, moduleId: string): Promise<ModuleProgress>;
+  completeModule(userId: number, moduleId: string, score?: number): Promise<ModuleProgress>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // Users
   async getUserByAuthId(authId: string): Promise<AppUser | undefined> {
     const [user] = await db.select().from(appUsers).where(eq(appUsers.authId, authId));
     return user;
@@ -69,7 +72,14 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  // Chores
+  async getMoods(userId: number): Promise<DailyMood[]> {
+    return db.select().from(dailyMoods).where(eq(dailyMoods.userId, userId)).orderBy(desc(dailyMoods.date));
+  }
+  async createMood(mood: InsertDailyMood): Promise<DailyMood> {
+    const [newMood] = await db.insert(dailyMoods).values(mood).returning();
+    return newMood;
+  }
+
   async getChores(assigneeId?: number, creatorId?: number): Promise<Chore[]> {
     if (assigneeId) {
       return db.select().from(chores).where(eq(chores.assigneeId, assigneeId)).orderBy(desc(chores.createdAt));
@@ -95,7 +105,6 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  // Goals
   async getGoals(userId: number): Promise<Goal[]> {
     return db.select().from(goals).where(eq(goals.userId, userId));
   }
@@ -122,7 +131,6 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  // Transactions
   async getTransactions(userId: number): Promise<Transaction[]> {
     return db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.createdAt));
   }
@@ -131,29 +139,26 @@ export class DatabaseStorage implements IStorage {
     return newTx;
   }
 
-  // Modules
   async getModuleProgress(userId: number): Promise<ModuleProgress[]> {
     return db.select().from(moduleProgress).where(eq(moduleProgress.userId, userId));
   }
-  async completeModule(userId: number, moduleId: string): Promise<ModuleProgress> {
+  async completeModule(userId: number, moduleId: string, score?: number): Promise<ModuleProgress> {
     const [existing] = await db.select().from(moduleProgress)
       .where(and(eq(moduleProgress.userId, userId), eq(moduleProgress.moduleId, moduleId)));
     
     if (existing) {
-      if (!existing.isCompleted) {
-         const [updated] = await db.update(moduleProgress)
-           .set({ isCompleted: true, completedAt: new Date() })
-           .where(eq(moduleProgress.id, existing.id))
-           .returning();
-         return updated;
-      }
-      return existing;
+      const [updated] = await db.update(moduleProgress)
+        .set({ isCompleted: true, score: score ?? existing.score, completedAt: new Date() })
+        .where(eq(moduleProgress.id, existing.id))
+        .returning();
+      return updated;
     }
 
     const [newProgress] = await db.insert(moduleProgress).values({
       userId,
       moduleId,
       isCompleted: true,
+      score,
       completedAt: new Date()
     }).returning();
     return newProgress;

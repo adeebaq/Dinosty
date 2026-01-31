@@ -4,11 +4,13 @@ import {
   insertChoreSchema, 
   insertGoalSchema,
   onboardingSchema,
+  insertDailyMoodSchema,
   appUsers,
   chores,
   goals,
   transactions,
-  moduleProgress
+  moduleProgress,
+  dailyMoods
 } from './schema';
 
 // ============================================
@@ -41,7 +43,7 @@ export const api = {
       path: '/api/me',
       responses: {
         200: z.custom<typeof appUsers.$inferSelect>(),
-        404: errorSchemas.notFound, // Not onboarded yet
+        404: errorSchemas.notFound,
       },
     },
     onboard: {
@@ -62,12 +64,33 @@ export const api = {
     },
   },
 
+  // Moods
+  moods: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/moods',
+      input: z.object({ userId: z.string().optional() }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof dailyMoods.$inferSelect>()),
+      },
+    },
+    submit: {
+      method: 'POST' as const,
+      path: '/api/moods',
+      input: insertDailyMoodSchema,
+      responses: {
+        201: z.custom<typeof dailyMoods.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+
   // Chores
   chores: {
     list: {
       method: 'GET' as const,
       path: '/api/chores',
-      input: z.object({ assigneeId: z.string().optional() }).optional(), // Filter by kid
+      input: z.object({ assigneeId: z.string().optional() }).optional(),
       responses: {
         200: z.array(z.custom<typeof chores.$inferSelect>()),
       },
@@ -116,8 +139,8 @@ export const api = {
       path: '/api/goals/:id/contribute',
       input: z.object({ amount: z.number().positive() }),
       responses: {
-        200: z.custom<typeof goals.$inferSelect>(), // Return updated goal
-        400: errorSchemas.validation, // Insufficient funds
+        200: z.custom<typeof goals.$inferSelect>(),
+        400: errorSchemas.validation,
       },
     },
   },
@@ -127,20 +150,22 @@ export const api = {
     list: {
       method: 'GET' as const,
       path: '/api/modules',
+      input: z.object({ userId: z.string().optional() }).optional(),
       responses: {
-        200: z.array(z.custom<typeof moduleProgress.$inferSelect>()), // Returns progress
+        200: z.array(z.custom<typeof moduleProgress.$inferSelect>()),
       },
     },
     complete: {
       method: 'POST' as const,
       path: '/api/modules/:id/complete',
+      input: z.object({ score: z.number().optional() }),
       responses: {
         200: z.custom<typeof moduleProgress.$inferSelect>(),
       },
     },
   },
 
-  // Transactions (History)
+  // Transactions
   transactions: {
     list: {
       method: 'GET' as const,

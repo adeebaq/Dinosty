@@ -73,7 +73,25 @@ export async function registerRoutes(
     res.json(children);
   });
 
-  // 4. Chores List
+  // Moods
+  app.get(api.moods.list.path, requireAppUser, async (req: any, res) => {
+    const targetUserId = req.query.userId ? Number(req.query.userId) : req.appUser.id;
+    const moods = await storage.getMoods(targetUserId);
+    res.json(moods);
+  });
+
+  app.post(api.moods.submit.path, requireAppUser, async (req: any, res) => {
+    try {
+      const input = api.moods.submit.input.parse(req.body);
+      const mood = await storage.createMood({ ...input, userId: req.appUser.id });
+      res.status(201).json(mood);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.message });
+      throw err;
+    }
+  });
+
+  // Chores List
   app.get(api.chores.list.path, requireAppUser, async (req: any, res) => {
     const user = req.appUser;
     let chores;
